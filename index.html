@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Magic – Stylish QR Code Generator</title>
+    
+    <meta name="theme-color" content="#4f46e5">
+    <meta name="description" content="100% Private in-browser custom QR code generator.">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4f46e5',
+                        secondary: '#9333ea',
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.3s ease-out',
+                        'slide-up': 'slideUp 0.4s ease-out'
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        },
+                        slideUp: {
+                            '0%': { opacity: '0', transform: 'translateY(20px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <script src="https://unpkg.com/qr-code-styling@1.6.0-rc.1/lib/qr-code-styling.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen font-sans">
+
+    <header class="bg-white shadow-sm sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+            <div>
+                <h1 class="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">QR Magic</h1>
+                <p class="text-sm text-slate-500 font-medium mt-1">Create beautiful custom QR codes</p>
+            </div>
+            <button id="btnReset" class="text-slate-500 hover:text-slate-800 transition-colors text-sm font-semibold flex items-center gap-1">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                Reset All
+            </button>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in">
+        
+        <div class="flex space-x-2 mb-6 p-1 bg-slate-200 rounded-xl max-w-xs mx-auto lg:mx-0">
+            <button id="tabSingle" class="flex-1 py-2 px-4 rounded-lg bg-white shadow text-sm font-semibold text-primary transition-all duration-200">Single QR</button>
+            <button id="tabBulk" class="flex-1 py-2 px-4 rounded-lg text-sm font-semibold text-slate-600 hover:text-slate-800 transition-all duration-200">Bulk Generate</button>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            
+            <div class="lg:col-span-7 space-y-6">
+                
+                <div id="sectionSingle" class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                    <h2 class="text-lg font-bold mb-4 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                        Content Data
+                    </h2>
+                    
+                    <div class="mb-4">
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">QR Type</label>
+                        <select id="qrType" class="w-full rounded-xl border-slate-300 shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50 p-2 border bg-slate-50">
+                            <option value="url">Link / URL</option>
+                            <option value="text">Plain Text</option>
+                            <option value="wifi">Wi-Fi Network</option>
+                            <option value="vcard">vCard / Contact</option>
+                            <option value="email">Email Address</option>
+                            <option value="phone">Phone Number</option>
+                            <option value="sms">SMS Message</option>
+                            <option value="geo">Geo Location</option>
+                        </select>
+                    </div>
+
+                    <div id="inputGroups" class="space-y-4">
+                        <div id="group-url" class="input-group block">
+                            <input type="text" id="valUrl" placeholder="https://example.com" class="w-full rounded-xl border-slate-300 shadow-sm p-3 border focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50">
+                        </div>
+                        <div id="group-text" class="input-group hidden">
+                            <textarea id="valText" rows="3" placeholder="Enter your text here..." class="w-full rounded-xl border-slate-300 shadow-sm p-3 border focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50"></textarea>
+                        </div>
+                        <div id="group-wifi" class="input-group hidden space-y-3">
+                            <input type="text" id="valWifiSsid" placeholder="Network Name (SSID)" class="w-full rounded-xl border-slate-300 shadow-sm p-3 border">
+                            <input type="text" id="valWifiPass" placeholder="Password" class="w-full rounded-xl border-slate-300 shadow-sm p-3 border">
+                            <select id="valWifiEnc" class="w-full rounded-xl border-slate-300 shadow-sm p-3 border bg-slate-50">
+                                <option value="WPA">WPA/WPA2</option>
+                                <option value="WEP">WEP</option>
+                                <option value="nopass">No Password</option>
+                            </select>
+                            <label class="flex items-center space-x-2 text-sm">
+                                <input type="checkbox" id="valWifiHidden" class="rounded text-primary focus:ring-primary">
+                                <span>Hidden Network</span>
+                            </label>
+                        </div>
+                        <div id="group-vcard" class="input-group hidden grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <input type="text" id="valVcardName" placeholder="Full Name" class="col-span-1 sm:col-span-2 rounded-xl border-slate-300 shadow-sm p-3 border">
+                            <input type="text" id="valVcardPhone" placeholder="Phone Number" class="rounded-xl border-slate-300 shadow-sm p-3 border">
+                            <input type="email" id="valVcardEmail" placeholder="Email Address" class="rounded-xl border-slate-300 shadow-sm p-3 border">
+                            <input type="text" id="valVcardCompany" placeholder="Company" class="col-span-1 sm:col-span-2 rounded-xl border-slate-300 shadow-sm p-3 border">
+                            <textarea id="valVcardAddress" rows="2" placeholder="Full Address" class="col-span-1 sm:col-span-2 rounded-xl border-slate-300 shadow-sm p-3 border"></textarea>
+                        </div>
+                        <div id="group-email" class="input-group hidden space-y-3">
+                            <input type="email" id="valEmailTo" placeholder="Recipient Email" class="w-full rounded-xl border-slate-300 shadow-sm p-3 border">
+                            <input type="text" id="valEmailSub" placeholder="Subject" class="w-full rounded-xl border-slate-300 shadow-sm p-3 border">
+                            <textarea id="valEmailBody" rows="2" placeholder="Message Body" class="w-full rounded-xl border-slate-300 shadow-sm p-3 border"></textarea>
+                        </div>
+                        <div id="group-phone" class="input-group hidden">
+                            <input type="tel" id="valPhone" placeholder="+1 234 567 8900" class="w-full rounded-xl border-slate-300 shadow-sm p-3 border">
+                        </div>
+                        <div id="group-sms" class="input-group hidden space-y-3">
+                            <input type="tel" id="valSmsPhone" placeholder="Phone Number" class="w-full rounded-xl border-slate-300 shadow-sm p-3 border">
+                            <textarea id="valSmsMsg" rows="2" placeholder="Message" class="w-full rounded-xl border-slate-300 shadow-sm p-3 border"></textarea>
+                        </div>
+                        <div id="group-geo" class="input-group hidden grid grid-cols-2 gap-3">
+                            <input type="number" step="any" id="valGeoLat" placeholder="Latitude" class="rounded-xl border-slate-300 shadow-sm p-3 border">
+                            <input type="number" step="any" id="valGeoLng" placeholder="Longitude" class="rounded-xl border-slate-300 shadow-sm p-3 border">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="sectionBulk" class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hidden">
+                    <h2 class="text-lg font-bold mb-4 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                        Bulk Generation (Lines)
+                    </h2>
+                    <p class="text-xs text-slate-500 mb-2">Paste multiple lines of text or URLs. One QR code will be generated per line.</p>
+                    <textarea id="valBulk" rows="6" placeholder="https://example.com/1&#10;https://example.com/2&#10;https://example.com/3" class="w-full rounded-xl border-slate-300 shadow-sm p-3 border focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50"></textarea>
+                    <button id="btnGenerateBulk" class="mt-4 w-full bg-primary hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition-all duration-200 flex justify-center items-center gap-2">
+                        <span>Generate Bulk QRs</span>
+                        <div id="bulkSpinner" class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin hidden"></div>
+                    </button>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                    <button id="toggleStyle" class="w-full p-6 text-left flex justify-between items-center focus:outline-none">
+                        <h2 class="text-lg font-bold flex items-center gap-2">
+                            <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"></path></svg>
+                            Design & Styling
+                        </h2>
+                        <svg id="styleIcon" class="w-5 h-5 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </button>
+                    
+                    <div id="styleContent" class="p-6 pt-0 space-y-6 block">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 mb-1">Foreground (Dots)</label>
+                                <div class="flex items-center gap-2">
+                                    <input type="color" id="optColorDark" value="#000000" class="h-10 w-14 rounded cursor-pointer border-0 p-0">
+                                    <input type="text" id="optColorDarkText" value="#000000" class="w-full text-sm border-slate-300 rounded-lg p-2 border">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 mb-1">Background</label>
+                                <div class="flex items-center gap-2">
+                                    <input type="color" id="optColorLight" value="#ffffff" class="h-10 w-14 rounded cursor-pointer border-0 p-0">
+                                    <input type="text" id="optColorLightText" value="#ffffff" class="w-full text-sm border-slate-300 rounded-lg p-2 border">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                            <label class="flex items-center space-x-2 text-sm font-semibold mb-3">
+                                <input type="checkbox" id="optGradEnable" class="rounded text-primary focus:ring-primary">
+                                <span>Enable Foreground Gradient</span>
+                            </label>
+                            <div id="gradControls" class="grid grid-cols-2 gap-4 hidden opacity-50 transition-opacity duration-300">
+                                <select id="optGradType" class="col-span-2 text-sm border-slate-300 rounded-lg p-2 border bg-white">
+                                    <option value="linear">Linear Gradient</option>
+                                    <option value="radial">Radial Gradient</option>
+                                </select>
+                                <div>
+                                    <label class="block text-xs text-slate-500 mb-1">Color 1</label>
+                                    <input type="color" id="optGrad1" value="#4f46e5" class="h-8 w-full rounded cursor-pointer border-0 p-0">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-slate-500 mb-1">Color 2</label>
+                                    <input type="color" id="optGrad2" value="#9333ea" class="h-8 w-full rounded cursor-pointer border-0 p-0">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 mb-1">Dots Style</label>
+                                <select id="optDots" class="w-full text-sm border-slate-300 rounded-lg p-2 border bg-slate-50">
+                                    <option value="square">Square</option>
+                                    <option value="dots">Dots</option>
+                                    <option value="rounded">Rounded</option>
+                                    <option value="classy">Classy</option>
+                                    <option value="classy-rounded">Classy Rounded</option>
+                                    <option value="extra-rounded">Extra Rounded</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 mb-1">Corner Square</label>
+                                <select id="optCornerSquare" class="w-full text-sm border-slate-300 rounded-lg p-2 border bg-slate-50">
+                                    <option value="square">Square</option>
+                                    <option value="dot">Dot</option>
+                                    <option value="extra-rounded">Extra Rounded</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 mb-1">Corner Dot</label>
+                                <select id="optCornerDot" class="w-full text-sm border-slate-300 rounded-lg p-2 border bg-slate-50">
+                                    <option value="square">Square</option>
+                                    <option value="dot">Dot</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 mb-1">Error Correction</label>
+                                <select id="optErrorLevel" class="w-full text-sm border-slate-300 rounded-lg p-2 border bg-slate-50">
+                                    <option value="L">Low (7%)</option>
+                                    <option value="M">Medium (15%)</option>
+                                    <option value="Q" selected>Quarter (25%)</option>
+                                    <option value="H">High (30%)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 mb-1">Output Size (px): <span id="lblSize">400</span></label>
+                                <input type="range" id="optSize" min="200" max="1000" step="50" value="400" class="w-full accent-primary mt-2">
+                            </div>
+                        </div>
+
+                        <div class="pt-2 border-t border-slate-100">
+                            <label class="block text-sm font-semibold text-slate-700 mb-2">Center Logo / Image</label>
+                            <div class="flex items-center gap-4">
+                                <label class="flex-1 cursor-pointer bg-slate-100 hover:bg-slate-200 text-slate-700 py-2 px-4 rounded-lg text-sm text-center font-medium transition-colors border border-slate-300 border-dashed">
+                                    <input type="file" id="optLogoFile" accept="image/*" class="hidden">
+                                    Upload Image
+                                </label>
+                                <button id="btnClearLogo" class="hidden text-red-500 hover:text-red-700 text-sm font-semibold p-2">Remove</button>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4 mt-3">
+                                <div>
+                                    <label class="block text-xs text-slate-500 mb-1">Image Margin</label>
+                                    <input type="number" id="optLogoMargin" value="5" min="0" max="50" class="w-full text-sm border-slate-300 rounded-lg p-2 border">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-slate-500 mb-1">Image Scale (%)</label>
+                                    <input type="number" id="optLogoScale" value="40" min="10" max="80" class="w-full text-sm border-slate-300 rounded-lg p-2 border">
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="lg:col-span-5 relative">
+                <div class="sticky top-24 bg-white/70 backdrop-blur-xl p-8 rounded-3xl shadow-xl border border-white flex flex-col items-center animate-slide-up">
+                    
+                    <h3 class="text-sm font-bold text-slate-400 uppercase tracking-widest mb-6">Live Preview</h3>
+                    
+                    <div id="qrPreview" class="bg-white p-4 rounded-2xl shadow-inner border border-slate-100 flex justify-center items-center overflow-hidden min-h-[250px] min-w-[250px] transition-all duration-300">
+                        </div>
+
+                    <div id="actionsSingle" class="w-full mt-8 space-y-3">
+                        <button id="btnCopy" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-3 px-4 rounded-xl shadow-sm transition-all duration-200 flex justify-center items-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                            Copy to Clipboard
+                        </button>
+                        <div class="grid grid-cols-2 gap-3">
+                            <button id="btnDlPng" class="bg-primary hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-xl shadow-md transition-all duration-200 flex justify-center items-center gap-2">
+                                Download PNG
+                            </button>
+                            <button id="btnDlSvg" class="bg-secondary hover:bg-purple-700 text-white font-bold py-3 px-4 rounded-xl shadow-md transition-all duration-200 flex justify-center items-center gap-2">
+                                Download SVG
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div id="sectionBulkResults" class="mt-12 hidden animate-fade-in">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-slate-800">Generated QR Codes (<span id="bulkCount">0</span>)</h2>
+                <button id="btnDlZip" class="bg-primary hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded-xl shadow-md transition-all duration-200 flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    Download All as ZIP
+                </button>
+            </div>
+            <div id="bulkGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                </div>
+        </div>
+
+    </main>
+
+    <footer class="mt-10 py-6 text-center text-slate-500 text-sm">
+        <p>Made with ❤️ – 100% Private in Browser</p>
+    </footer>
+
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-3"></div>
+
+    <script>
+        /** * Core Application Logic 
+         * Modular components using vanilla JS, adhering to specific requirements.
+         */
+
+        // State Management
+        let qrCode;
+        let logoBase64 = null;
+        let updateTimeout;
+        let bulkBlobs = []; // Array to store {name, blob} for JSZip
+
+        // DOM Elements
+        const DOM = {
+            tabs: { single: document.getElementById('tabSingle'), bulk: document.getElementById('tabBulk') },
+            sections: { single: document.getElementById('sectionSingle'), bulk: document.getElementById('sectionBulk'), bulkRes: document.getElementById('sectionBulkResults') },
+            actions: { single: document.getElementById('actionsSingle') },
+            qrType: document.getElementById('qrType'),
+            inputGroups: document.querySelectorAll('.input-group'),
+            preview: document.getElementById('qrPreview'),
+            inputs: {
+                url: document.getElementById('valUrl'), text: document.getElementById('valText'),
+                wifiSsid: document.getElementById('valWifiSsid'), wifiPass: document.getElementById('valWifiPass'), wifiEnc: document.getElementById('valWifiEnc'), wifiHidden: document.getElementById('valWifiHidden'),
+                vcName: document.getElementById('valVcardName'), vcPhone: document.getElementById('valVcardPhone'), vcEmail: document.getElementById('valVcardEmail'), vcComp: document.getElementById('valVcardCompany'), vcAddr: document.getElementById('valVcardAddress'),
+                emTo: document.getElementById('valEmailTo'), emSub: document.getElementById('valEmailSub'), emBody: document.getElementById('valEmailBody'),
+                phone: document.getElementById('valPhone'),
+                smsPhone: document.getElementById('valSmsPhone'), smsMsg: document.getElementById('valSmsMsg'),
+                geoLat: document.getElementById('valGeoLat'), geoLng: document.getElementById('valGeoLng'),
+                bulk: document.getElementById('valBulk')
+            },
+            opts: {
+                colorDark: document.getElementById('optColorDark'), colorDarkText: document.getElementById('optColorDarkText'),
+                colorLight: document.getElementById('optColorLight'), colorLightText: document.getElementById('optColorLightText'),
+                gradEnable: document.getElementById('optGradEnable'), gradType: document.getElementById('optGradType'), grad1: document.getElementById('optGrad1'), grad2: document.getElementById('optGrad2'), gradControls: document.getElementById('gradControls'),
+                dots: document.getElementById('optDots'), cornerSq: document.getElementById('optCornerSquare'), cornerDt: document.getElementById('optCornerDot'),
+                errLvl: document.getElementById('optErrorLevel'), size: document.getElementById('optSize'), sizeLbl: document.getElementById('lblSize'),
+                logoFile: document.getElementById('optLogoFile'), logoMargin: document.getElementById('optLogoMargin'), logoScale: document.getElementById('optLogoScale'), clearLogo: document.getElementById('btnClearLogo')
+            }
+        };
+
+        // Initialize Application
+        function initApp() {
+            setupEventListeners();
+            loadState();
+            initQR();
+        }
+
+        // Setup Event Listeners
+        function setupEventListeners() {
+            // Tab switching
+            DOM.tabs.single.addEventListener('click', () => switchMode('single'));
+            DOM.tabs.bulk.addEventListener('click', () => switchMode('bulk'));
+
+            // Type Switching
+            DOM.qrType.addEventListener('change', (e) => {
+                DOM.inputGroups.forEach(g => {
+                    g.classList.add('hidden');
+                    g.classList.remove('block');
+                });
+                const activeGroup = document.getElementById(`group-${e.target.value}`);
+                activeGroup.classList.remove('hidden');
+                activeGroup.classList.add('block');
+                triggerGenerate();
+            });
+
+            // Input Data Listeners (Debounced)
+            Object.values(DOM.inputs).forEach(input => {
+                if (input) input.addEventListener('input', triggerGenerate);
+            });
+
+            // Styling Listeners
+            const styleInputs = [DOM.opts.colorDark, DOM.opts.colorLight, DOM.opts.gradType, DOM.opts.grad1, DOM.opts.grad2, DOM.opts.dots, DOM.opts.cornerSq, DOM.opts.cornerDt, DOM.opts.errLvl, DOM.opts.size, DOM.opts.logoMargin, DOM.opts.logoScale];
+            styleInputs.forEach(input => input.addEventListener('input', triggerGenerate));
+            
+            // Special color syncs
+            DOM.opts.colorDark.addEventListener('input', (e) => DOM.opts.colorDarkText.value = e.target.value);
+            DOM.opts.colorDarkText.addEventListener('input', (e) => { DOM.opts.colorDark.value = e.target.value; triggerGenerate(); });
+            DOM.opts.colorLight.addEventListener('input', (e) => DOM.opts.colorLightText.value = e.target.value);
+            DOM.opts.colorLightText.addEventListener('input', (e) => { DOM.opts.colorLight.value = e.target.value; triggerGenerate(); });
+            
+            // Gradient Toggle
+            DOM.opts.gradEnable.addEventListener('change', (e) => {
+                if(e.target.checked) {
+                    DOM.opts.gradControls.classList.remove('hidden');
+                    setTimeout(() => DOM.opts.gradControls.classList.remove('opacity-50'), 10);
+                } else {
+                    DOM.opts.gradControls.classList.add('opacity-50');
+                    setTimeout(() => DOM.opts.gradControls.classList.add('hidden'), 300);
+                }
+                triggerGenerate();
+            });
+
+            // Size label sync
+            DOM.opts.size.addEventListener('input', (e) => DOM.opts.sizeLbl.textContent = e.target.value);
+
+            // Logo Upload
+            DOM.opts.logoFile.addEventListener('change', handleLogoUpload);
+            DOM.opts.clearLogo.addEventListener('click', () => {
+                logoBase64 = null;
+                DOM.opts.clearLogo.classList.add('hidden');
+                DOM.opts.logoFile.value = '';
+                triggerGenerate();
+            });
+
+            // Accordion Toggle
+            document.getElementById('toggleStyle').addEventListener('click', () => {
+                const content = document.getElementById('styleContent');
+                const icon = document.getElementById('styleIcon');
+                content.classList.toggle('hidden');
+                icon.classList.toggle('rotate-180');
+            });
+
+            // Actions
+            document.getElementById('btnDlPng').addEventListener('click', () => downloadSingle('png'));
+            document.getElementById('btnDlSvg').addEventListener('click', () => downloadSingle('svg'));
+            document.getElementById('btnCopy').addEventListener('click', copyToClipboard);
+            document.getElementById('btnReset').addEventListener('click', resetAll);
+            document.getElementById('btnGenerateBulk').addEventListener('click', generateBulk);
+            document.getElementById('btnDlZip').addEventListener('click', downloadZip);
+        }
+
+        // Initialize QRCodeStyling instance
+        function initQR() {
+            qrCode = new QRCodeStyling(getQROptions());
+            qrCode.append(DOM.preview);
+            generateQR();
+        }
+
+        // Build Configuration Object for Library
+        function getQROptions(customData = null) {
+            const size = parseInt(DOM.opts.size.value);
+            const data = customData !== null ? customData : getActiveDataString();
+            
+            let options = {
+                width: size,
+                height: size,
+                data: data || 'https://example.com',
+                margin: 10,
+                qrOptions: { errorCorrectionLevel: DOM.opts.errLvl.value },
+                imageOptions: { hideBackgroundDots: true, imageSize: DOM.opts.logoScale.value / 100, margin: parseInt(DOM.opts.logoMargin.value) },
+                dotsOptions: { type: DOM.opts.dots.value },
+                backgroundOptions: { color: DOM.opts.colorLight.value },
+                cornersSquareOptions: { type: DOM.opts.cornerSq.value },
+                cornersDotOptions: { type: DOM.opts.cornerDt.value }
+            };
+
+            // Gradient Logic
+            if (DOM.opts.gradEnable.checked) {
+                options.dotsOptions.gradient = {
+                    type: DOM.opts.gradType.value,
+                    colorStops: [{ offset: 0, color: DOM.opts.grad1.value }, { offset: 1, color: DOM.opts.grad2.value }]
+                };
+            } else {
+                options.dotsOptions.color = DOM.opts.colorDark.value;
+                options.cornersSquareOptions.color = DOM.opts.colorDark.value;
+                options.cornersDotOptions.color = DOM.opts.colorDark.value;
+            }
+
+            // Logo Logic
+            if (logoBase64) {
+                options.image = logoBase64;
+            }
+
+            return options;
+        }
+
+        // Formatters for different QR Types
+        function getActiveDataString() {
+            const type = DOM.qrType.value;
+            let str = '';
+            
+            switch(type) {
+                case 'url': 
+                    str = DOM.inputs.url.value || 'https://example.com'; 
+                    if (!/^https?:\/\//i.test(str)) str = 'https://' + str;
+                    break;
+                case 'text': 
+                    str = DOM.inputs.text.value || 'Hello World'; break;
+                case 'wifi':
+                    const s = DOM.inputs.wifiSsid.value;
+                    const p = DOM.inputs.wifiPass.value;
+                    const e = DOM.inputs.wifiEnc.value;
+                    const h = DOM.inputs.wifiHidden.checked ? 'true' : 'false';
+                    str = `WIFI:T:${e};S:${s};P:${p};H:${h};;`;
+                    break;
+                case 'vcard':
+                    str = `BEGIN:VCARD\nVERSION:3.0\nN:${DOM.inputs.vcName.value}\nTEL:${DOM.inputs.vcPhone.value}\nEMAIL:${DOM.inputs.vcEmail.value}\nORG:${DOM.inputs.vcComp.value}\nADR:;;${DOM.inputs.vcAddr.value}\nEND:VCARD`;
+                    break;
+                case 'email':
+                    str = `mailto:${DOM.inputs.emTo.value}?subject=${encodeURIComponent(DOM.inputs.emSub.value)}&body=${encodeURIComponent(DOM.inputs.emBody.value)}`;
+                    break;
+                case 'phone':
+                    str = `tel:${DOM.inputs.phone.value}`; break;
+                case 'sms':
+                    str = `smsto:${DOM.inputs.smsPhone.value}:${DOM.inputs.smsMsg.value}`; break;
+                case 'geo':
+                    str = `geo:${DOM.inputs.geoLat.value},${DOM.inputs.geoLng.value}`; break;
+            }
+            return str;
+        }
+
+        // Debounced Generator
+        function triggerGenerate() {
+            clearTimeout(updateTimeout);
+            updateTimeout = setTimeout(() => {
+                generateQR();
+                saveState();
+            }, 200);
+        }
+
+        // Apply Update to Canvas
+        function generateQR() {
+            if (!qrCode) return;
+            const opts = getQROptions();
+            qrCode.update(opts);
+        }
+
+        // Handle Image Upload -> Base64
+        function handleLogoUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                logoBase64 = event.target.result;
+                DOM.opts.clearLogo.classList.remove('hidden');
+                triggerGenerate();
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // UI Mode Switcher
+        function switchMode(mode) {
+            if (mode === 'single') {
+                DOM.tabs.single.classList.add('bg-white', 'shadow', 'text-primary');
+                DOM.tabs.single.classList.remove('text-slate-600');
+                DOM.tabs.bulk.classList.remove('bg-white', 'shadow', 'text-primary');
+                DOM.tabs.bulk.classList.add('text-slate-600');
+                DOM.sections.single.classList.remove('hidden');
+                DOM.sections.bulk.classList.add('hidden');
+                DOM.actions.single.classList.remove('hidden');
+                DOM.sections.bulkRes.classList.add('hidden');
+            } else {
+                DOM.tabs.bulk.classList.add('bg-white', 'shadow', 'text-primary');
+                DOM.tabs.bulk.classList.remove('text-slate-600');
+                DOM.tabs.single.classList.remove('bg-white', 'shadow', 'text-primary');
+                DOM.tabs.single.classList.add('text-slate-600');
+                DOM.sections.bulk.classList.remove('hidden');
+                DOM.sections.single.classList.add('hidden');
+                DOM.actions.single.classList.add('hidden');
+                if (bulkBlobs.length > 0) DOM.sections.bulkRes.classList.remove('hidden');
+            }
+        }
+
+        // Actions: Download
+        function downloadSingle(ext) {
+            const filename = `qr-${DOM.qrType.value}-${Date.now()}`;
+            qrCode.download({ name: filename, extension: ext });
+            showToast(`Downloaded ${ext.toUpperCase()} successfully!`);
+        }
+
+        // Actions: Copy to Clipboard
+        async function copyToClipboard() {
+            try {
+                const blob = await qrCode.getRawData('png');
+                await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+                showToast("QR Code copied to clipboard!");
+            } catch (err) {
+                console.error(err);
+                showToast("Copy failed. Ensure site is HTTPS.");
+            }
+        }
+
+        // Bulk Generation Logic
+        async function generateBulk() {
+            const lines = DOM.inputs.bulk.value.split('\n').map(l => l.trim()).filter(l => l !== '');
+            if (lines.length === 0) return showToast("Please enter data for bulk generation.");
+            if (lines.length > 100) return showToast("Max 100 lines at a time to prevent browser freeze.");
+
+            const spinner = document.getElementById('bulkSpinner');
+            spinner.classList.remove('hidden');
+            
+            const grid = document.getElementById('bulkGrid');
+            grid.innerHTML = '';
+            bulkBlobs = [];
+            
+            DOM.sections.bulkRes.classList.remove('hidden');
+            document.getElementById('bulkCount').textContent = lines.length;
+
+            // Generate asynchronously to keep UI responsive
+            for (let i = 0; i < lines.length; i++) {
+                const data = lines[i];
+                const tempQr = new QRCodeStyling(getQROptions(data));
+                
+                // Get Blob for ZIP
+                const blob = await tempQr.getRawData('png');
+                bulkBlobs.push({ name: `qr-${i+1}.png`, blob: blob });
+
+                // Render small preview
+                const card = document.createElement('div');
+                card.className = "bg-white p-3 rounded-xl shadow-sm border border-slate-100 flex flex-col items-center";
+                
+                const previewContainer = document.createElement('div');
+                previewContainer.className = "w-full aspect-square bg-slate-50 flex items-center justify-center rounded-lg overflow-hidden";
+                
+                // Overwrite size for small preview rendering
+                const smallOpts = getQROptions(data);
+                smallOpts.width = 150; 
+                smallOpts.height = 150;
+                const smallQr = new QRCodeStyling(smallOpts);
+                smallQr.append(previewContainer);
+
+                const label = document.createElement('p');
+                label.className = "text-xs text-slate-500 mt-2 truncate w-full text-center";
+                label.title = data;
+                label.textContent = data.length > 20 ? data.substring(0, 20) + '...' : data;
+
+                card.appendChild(previewContainer);
+                card.appendChild(label);
+                grid.appendChild(card);
+            }
+            
+            spinner.classList.add('hidden');
+            showToast(`Generated ${lines.length} QR codes!`);
+        }
+
+        // JSZip Download Logic
+        async function downloadZip() {
+            if (bulkBlobs.length === 0) return;
+            const zip = new JSZip();
+            const folder = zip.folder("QR_Magic_Exports");
+            
+            bulkBlobs.forEach(item => {
+                folder.file(item.name, item.blob);
+            });
+
+            const content = await zip.generateAsync({ type: "blob" });
+            const url = URL.createObjectURL(content);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `QR_Magic_Bulk_${Date.now()}.zip`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast("ZIP downloaded successfully!");
+        }
+
+        // LocalStorage Logic
+        function saveState() {
+            const state = {
+                type: DOM.qrType.value,
+                opts: {
+                    colorDark: DOM.opts.colorDark.value, colorLight: DOM.opts.colorLight.value,
+                    gradEnable: DOM.opts.gradEnable.checked, gradType: DOM.opts.gradType.value, grad1: DOM.opts.grad1.value, grad2: DOM.opts.grad2.value,
+                    dots: DOM.opts.dots.value, cornerSq: DOM.opts.cornerSq.value, cornerDt: DOM.opts.cornerDt.value,
+                    errLvl: DOM.opts.errLvl.value, size: DOM.opts.size.value, logoMargin: DOM.opts.logoMargin.value, logoScale: DOM.opts.logoScale.value
+                }
+            };
+            localStorage.setItem('qrMagicState', JSON.stringify(state));
+        }
+
+        function loadState() {
+            try {
+                const saved = JSON.parse(localStorage.getItem('qrMagicState'));
+                if (!saved) return;
+                
+                DOM.qrType.value = saved.type || 'url';
+                DOM.qrType.dispatchEvent(new Event('change'));
+
+                if(saved.opts) {
+                    DOM.opts.colorDark.value = saved.opts.colorDark || '#000000'; DOM.opts.colorDarkText.value = DOM.opts.colorDark.value;
+                    DOM.opts.colorLight.value = saved.opts.colorLight || '#ffffff'; DOM.opts.colorLightText.value = DOM.opts.colorLight.value;
+                    DOM.opts.gradEnable.checked = saved.opts.gradEnable || false; DOM.opts.gradEnable.dispatchEvent(new Event('change'));
+                    DOM.opts.gradType.value = saved.opts.gradType || 'linear';
+                    DOM.opts.grad1.value = saved.opts.grad1 || '#4f46e5';
+                    DOM.opts.grad2.value = saved.opts.grad2 || '#9333ea';
+                    DOM.opts.dots.value = saved.opts.dots || 'square';
+                    DOM.opts.cornerSq.value = saved.opts.cornerSq || 'square';
+                    DOM.opts.cornerDt.value = saved.opts.cornerDt || 'square';
+                    DOM.opts.errLvl.value = saved.opts.errLvl || 'Q';
+                    DOM.opts.size.value = saved.opts.size || '400'; DOM.opts.sizeLbl.textContent = DOM.opts.size.value;
+                    DOM.opts.logoMargin.value = saved.opts.logoMargin || '5';
+                    DOM.opts.logoScale.value = saved.opts.logoScale || '40';
+                }
+            } catch (e) { console.error("Could not load state", e); }
+        }
+
+        function resetAll() {
+            if(confirm("Are you sure you want to reset all designs and data?")) {
+                localStorage.removeItem('qrMagicState');
+                location.reload();
+            }
+        }
+
+        // Toast UI
+        function showToast(msg) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = 'bg-slate-800 text-white px-6 py-3 rounded-xl shadow-2xl text-sm font-semibold flex items-center gap-2 transform translate-y-10 opacity-0 transition-all duration-300';
+            toast.innerHTML = `<svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> ${msg}`;
+            
+            container.appendChild(toast);
+            
+            // Animate in
+            setTimeout(() => {
+                toast.classList.remove('translate-y-10', 'opacity-0');
+            }, 10);
+
+            // Animate out
+            setTimeout(() => {
+                toast.classList.add('translate-y-10', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Boot
+        window.addEventListener('DOMContentLoaded', initApp);
+    </script>
+</body>
+</html>
